@@ -1,9 +1,9 @@
-use axum::{
-    routing::{get, post},
-    http::StatusCode,
-    Json, Router,
-};
+use axum::{routing::{get, post}, http::StatusCode, Json, Router, Error};
+use axum::body::Body;
+use axum::http::Request;
+use axum::response::{IntoResponse, Redirect, Response};
 use serde::{Deserialize, Serialize};
+use tower::ServiceExt;
 
 #[tokio::main]
 async fn main() {
@@ -15,7 +15,10 @@ async fn main() {
         // `GET /` goes to `root`
         .route("/", get(root))
         // `POST /users` goes to `create_user`
-        .route("/users", post(create_user));
+        .route("/users", post(create_user))
+//        .route("/play", get(redirect_to_play))
+        .route("/playmp4", get(mp4_file_handler))
+        ;
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
@@ -41,6 +44,13 @@ async fn create_user(
     // this will be converted into a JSON response
     // with a status code of `201 Created`
     (StatusCode::CREATED, Json(user))
+}
+
+async fn mp4_file_handler(request: Request<Body>) -> impl IntoResponse {
+    let filename = "/home/tom/Videos/maracatu.m4v";
+
+    let serve_file = tower_http::services::fs::ServeFile::new(filename);
+    serve_file.oneshot(request).await
 }
 
 // the input to our `create_user` handler
